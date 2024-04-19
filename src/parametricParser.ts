@@ -57,12 +57,12 @@ export const parseInput = (data: string[], ops: Operation[]) : Record<string, an
             continue;
         }
 
-        let result = data.slice(idx, op.count);
+        let raw_result = data.slice(idx, op.count);
         idx += op.count;
 
         if (op.op_type === OperationType.ignore) continue;
 
-        result.map(x => {
+        outputs[op.target!] = raw_result.map(x => {
             switch (op.op_type) {
                 case OperationType.string:
                     return x;
@@ -71,78 +71,9 @@ export const parseInput = (data: string[], ops: Operation[]) : Record<string, an
                 case OperationType.bool:
                     return x === "true";
             }
-        })
-        outputs[op.target!] = result;
+        });
+        if (outputs[op.target!].length === 1) outputs[op.target!] = outputs[op.target!][0];
     }
 
     return outputs;
 }
-
-
-// do multiple iterations to resolve vars
-// when all resolved, exec
-
-
-
-// for (const op of positive) {
-//     if (typeof op.count === "number") {
-//         if (op.count < 1) {
-//             continue;
-//         } else if (op.count === 1) {
-//             switch (op.op_type) {
-//                 case OperationType.number:
-//                     outputs[op.target!] = +data[idx];
-//                     break;
-//                 case OperationType.string:
-//                     outputs[op.target!] = data[idx];
-//                     break;
-//                 case OperationType.bool:
-//                     outputs[op.target!] = data[idx] === "true";
-//                     break;
-//             }
-//         } else if (op.count === EOF) {
-//             // TODO
-//         } else {
-//             switch (op.op_type) {
-//                 case OperationType.number:
-//                     outputs[op.target!] = data.slice(idx, op.count).map(x => +x);
-//                     break;
-//                 case OperationType.string:
-//                     outputs[op.target!] = data.slice(idx, op.count);
-//                     break;
-//                 case OperationType.bool:
-//                     outputs[op.target!] = data.slice(idx, op.count).map(x => x === "true");
-//                     break;
-//             }
-//
-//             idx += op.count;
-//         }
-//     } else {
-//         if (op.count in outputs) {
-//             op.count = outputs[op.count];
-//         }
-//     }
-// }
-// for (const op of negative) {
-//
-// }
-
-
-
-// export const operations: {[key in OperationType] : OperationCreator} = Object.fromEntries(
-//     // (Object.keys(OperationType) as Array<keyof typeof OperationType>)
-//     Object.values(OperationType)
-//         .map(k => [
-//             k,
-//             (count: string | number, target : string | undefined = undefined) => new Operation(OperationType[k], count, target)
-//         ])
-// );
-
-// export const operations: Record<keyof typeof OperationType, OperationCreator> = Object.fromEntries(
-//     Object.entries(Object.keys(OperationType))
-//         .map((k) => [
-//             k,
-//             (count: string | number = 1, target? : string) => new Operation(OperationType.bool, count, target)
-//         ])
-// );
-

@@ -9,7 +9,7 @@ export enum RunMode {
 }
 
 interface Options<T extends boolean> {
-    run: RunMode,
+    run: RunMode | string,
     split_lines: T,
     folder: string,
     file_count: number,
@@ -17,6 +17,7 @@ interface Options<T extends boolean> {
     inspect_output: boolean,
     output_folder: string,
     print_output: boolean,
+    log_progress: boolean
 }
 
 const default_options: Options<true> = {
@@ -28,6 +29,16 @@ const default_options: Options<true> = {
     inspect_output: false,
     output_folder: "./out",
     print_output: true,
+    log_progress: true
+}
+
+const generateFilePath = (folder: string, subfolder: boolean, level: number, id: number | string) : [string, string] => {
+    return [
+        String(id),
+        subfolder?
+            path.join(folder, `level${level}`, `level${level}_${id}.in`) :
+            path.join(folder, `level${level}_${id}.in`)
+    ];
 }
 
 export const load = <T extends boolean = typeof default_options.split_lines>(
@@ -39,28 +50,27 @@ export const load = <T extends boolean = typeof default_options.split_lines>(
     let opt: Options<T | typeof default_options.split_lines> = {...default_options, ...options};
 
     let files: [string, string][] = [];
+    if (typeof opt.run === "string") {
+        files.push(generateFilePath(opt.folder, opt.use_subfolders, level, opt.run));
+    }
     switch (opt.run) {
         case RunMode.ALL:
         case RunMode.EXAMPLE:
-            files.push([
-                "example",
-                opt.use_subfolders ?
-                    path.join(opt.folder, `level${level}`, `level${level}_example.in`) :
-                    path.join(opt.folder, `level${level}_example.in`)
-            ]);
+            files.push(generateFilePath(opt.folder, opt.use_subfolders, level, "example"));
             if (opt.run === RunMode.EXAMPLE) break;
         case RunMode.PROD:
             for (let i = 1; i <= opt.file_count; i++) {
-                files.push([
-                    String(i),
-                    opt.use_subfolders ?
-                        path.join(opt.folder, `level${level}`, `level${level}_${i}.in`) :
-                        path.join(opt.folder, `level${level}_${i}.in`)
-                ]);
+                files.push(generateFilePath(opt.folder, opt.use_subfolders, level, i));
             }
     }
 
     for (let [id, filepath] of files) {
+        let start;
+        if (opt.log_progress) {
+            start = Date.now();
+            console.log(`\x1b[35m -- Exec: level${level}/${id}\x1b[0m${opt.print_output ? "\n" : ""}`);
+        }
+
         const content = fs.readFileSync(filepath, "utf-8");
         let output: any;
 
@@ -88,6 +98,10 @@ export const load = <T extends boolean = typeof default_options.split_lines>(
             } else {
                 fs.writeFileSync(out_path, String(output));
             }
+        }
+
+        if (opt.log_progress) {
+            console.log(`${opt.print_output ? "\n" : ""}\x1b[35m -- Done: level${level}/${id} (${Date.now() - start!}ms) \x1b[0m`);
         }
     }
 }
